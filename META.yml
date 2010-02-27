@@ -1,0 +1,21 @@
+---
+abstract: 'Use Ghostscript to convert PostScript to other formats'
+author:
+  - 'Christopher J. Madsen <perl@cjmweb.net>'
+generated_by: 'Dist::Zilla version 1.100520'
+license: perl
+meta-spec:
+  url: http://module-build.sourceforge.net/META-spec-v1.4.html
+  version: 1.4
+name: PostScript-Convert
+requires:
+  Carp: 0
+  Exporter: 0
+  ExtUtils::MakeMaker: 6.11
+  File::Spec: 0
+  File::Temp: 0.19
+  Scalar::Util: 0
+  perl: 5.8.0
+resources:
+  repository: http://github.com/madsen/postscript-convert
+version: 0.01
