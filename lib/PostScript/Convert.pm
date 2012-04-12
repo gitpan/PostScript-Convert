@@ -1,7 +1,7 @@
 #---------------------------------------------------------------------
 package PostScript::Convert;
 #
-# Copyright 2009 Christopher J. Madsen
+# Copyright 2012 Christopher J. Madsen
 #
 # Author: Christopher J. Madsen <perl@cjmweb.net>
 # Created: November 9, 2009
@@ -18,7 +18,7 @@ package PostScript::Convert;
 #---------------------------------------------------------------------
 
 use 5.008;
-our $VERSION = '0.01';          ## no critic
+our $VERSION = '0.02';          ## no critic
 
 use strict;
 use warnings;
@@ -27,7 +27,7 @@ use File::Spec ();
 use Scalar::Util qw(blessed openhandle reftype);
 
 
-use Exporter 'import';
+use Exporter 5.57 'import';     # exported import method
 
 our @EXPORT = qw(psconvert);
 
@@ -40,39 +40,73 @@ our %default = (
   ghostscript => ($^O =~ 'MSWin32' ? 'gswin32c.exe' : 'gs'),
 );
 
-our %format = (
-  png => {
-    device    => 'png16m',
-    extension => 'png',
+our %format = do {
+  my @png_param = (
+    extension    => 'png',
     format_param => [qw(-dTextAlphaBits=4 -dGraphicsAlphaBits=4)],
-  },
-  pnggray => {
-    device    => 'pnggray',
-    extension => 'png',
-    format_param => [qw(-dTextAlphaBits=4 -dGraphicsAlphaBits=4)],
-  },
-  pngmono => {
-    device    => 'pngmono',
-    extension => 'png',
-  },
-  pdf14 => {
-    device    => 'pdfwrite',
-    extension => 'pdf',
-    format_param => [qw(-dCompatibilityLevel=1.4 -c .setpdfwrite)],
-  },
-  pdf13 => {
-    device    => 'pdfwrite',
-    extension => 'pdf',
-    format_param => [qw(-dCompatibilityLevel=1.3 -c .setpdfwrite)],
-  },
-  pdf12 => {
-    device    => 'pdfwrite',
-    extension => 'pdf',
-    format_param => [qw(-dCompatibilityLevel=1.2 -c .setpdfwrite)],
-  },
-);
+  );
+
+  my @pdf_param  = (
+    device      => 'pdfwrite',
+    extension   => 'pdf',
+    format_code => [qw(-c .setpdfwrite)],
+    'format_param' # => VALUE
+  );
+
+  (
+    png     => { device => 'png16m',  @png_param },
+    pnggray => { device => 'pnggray', @png_param },
+    pngmono => { device => 'pngmono', extension => 'png' },
+    pdf14   => { @pdf_param => ['-dCompatibilityLevel=1.4'] },
+    pdf13   => { @pdf_param => ['-dCompatibilityLevel=1.3'] },
+    pdf12   => { @pdf_param => ['-dCompatibilityLevel=1.2'] },
+  );
+}; # end %format
 
 $format{pdf} = $format{pdf14};
+
+our %paper_size = (
+  executive           => [522, 756],
+  folio               => [595, 935],
+  'half-letter'       => [612, 397],
+  letter              => [612, 792],
+  legal               => [612, 1008],
+  tabloid             => [792, 1224],
+  superb              => [843, 1227],
+  ledger              => [1224, 792],
+
+  'comm #10 envelope' => [297, 684],
+  'envelope-monarch'  => [280, 542],
+  'envelope-c5'       => [459.21260, 649.13386],
+  'envelope-dl'       => [311.81102, 623.62205],
+
+  a0  => [2383.93701, 3370.39370],
+  a1  => [1683.77953, 2383.93701],
+  a2  => [1190.55118, 1683.77953],
+  a3  => [ 841.88976, 1190.55118],
+  a4  => [ 595.27559,  841.88976],
+  a5  => [ 419.52756,  595.27559],
+  a6  => [ 297.63780,  419.52756],
+  a7  => [ 209.76378,  297.63780],
+  a8  => [ 147.40157,  209.76378],
+  a9  => [ 104.88189,  147.40157],
+  a10 => [  73.70079,  104.88189],
+
+  b0  => [2834.64567, 4008.18898],
+  b1  => [2004.09449, 2834.64567],
+  b2  => [1417.32283, 2004.09449],
+  b3  => [1000.62992, 1417.32283],
+  b4  => [ 708.66142, 1000.62992],
+  b5  => [ 498.89764,  708.66142],
+  b6  => [ 354.33071,  498.89764],
+  b7  => [ 249.44882,  354.33071],
+  b8  => [ 175.74803,  249.44882],
+  b9  => [ 124.72441,  175.74803],
+  b10 => [  87.87402,  124.72441],
+);
+
+$paper_size{"us-$_"} = $paper_size{$_} for qw(letter legal);
+$paper_size{europostcard} = $paper_size{a6};
 
 #---------------------------------------------------------------------
 sub psconvert
@@ -113,11 +147,14 @@ sub convert_psfile
       unless $v >= 2;
 
 
+  # Get paper size, if necessary:
+  $opt->{paper_size} ||= [ $ps->get_width, $ps->get_height ];
+
   # Save old filename:
   my $oldFN  = $ps->get_filename;
   $opt->{input} ||= "$oldFN.ps" if defined $oldFN;
 
-  require File::Temp;
+  require File::Temp; File::Temp->VERSION(0.19); # need newdir method
 
   if ($ps->get_eps and $ps->get_pagecount > 1) {
     # Compute output filename:
@@ -221,8 +258,26 @@ sub check_options
   croak "No output device supplied" unless defined $device and length $device;
   push @cmd, "-sDEVICE=$device";
 
+  if (defined(my $size = $opt->{paper_size})) {
+    unless (ref $size) {
+      if ($paper_size{lc $size}) {
+        $size = $paper_size{lc $size};
+      } elsif ($size =~ /\A(\d+(?:\.\d+)?)x(\d+(?:\.\d+)?)\Z/i) {
+        $size = [ $1 * 72, $2 * 72 ];
+      } else {
+        croak "Unknown paper size '$size'";
+
+
+      }
+    } # end unless ref $size
+    push @cmd, '-dDEVICEWIDTHPOINTS='  . $size->[0],
+               '-dDEVICEHEIGHTPOINTS=' . $size->[1];
+  } # end if $opt->{paper_size}
+
+  push @cmd, "-r$opt->{resolution}"    if $opt->{resolution};
   push @cmd, @{ $opt->{format_param} } if $opt->{format_param};
   push @cmd, @{ $opt->{gs_param} }     if $opt->{gs_param};
+  push @cmd, @{ $opt->{format_code} }  if $opt->{format_code};
 
   print STDERR "@cmd\n" if $Debug;
 
@@ -316,8 +371,8 @@ PostScript::Convert - Use Ghostscript to convert PostScript to other formats
 
 =head1 VERSION
 
-This document describes version 0.01 of
-PostScript::Convert, released February 26, 2010.
+This document describes version 0.02 of
+PostScript::Convert, released April 12, 2012.
 
 =head1 SYNOPSIS
 
@@ -393,6 +448,9 @@ The remaining arguments after C<$input> are key-value pairs that
 control the output.  If there are an odd number of arguments following
 C<$input>, then the first one is the C<filename>.
 
+Options added since version 0.01 are marked with the
+version they were added in (e.g. "(v0.02)").
+
 =over
 
 =item C<filename>
@@ -456,6 +514,24 @@ this file, and it need not exist on disk.)  If omitted, it will be
 taken from C<$input> (if that is a filename or a PostScript::File
 object containing a filename).
 
+=item C<paper_size>
+
+(v0.02) The desired output paper size.  This can be a string
+indicating a known L<paper size|/"Paper Sizes">, a string of the form
+C<WIDTHxHEIGHT> (where WIDTH and HEIGHT are in inches), or an arrayref
+of two numbers S<C<[ WIDTH, HEIGHT ]>> (where WIDTH and HEIGHT are in
+points).  If omitted, Ghostscript will use its default paper size,
+unless you pass a PostScript::File object (or an object that supplies
+a PostScript::File), in which case the paper size will be taken from
+that object.
+
+=item C<resolution>
+
+(v0.02) The desired output resolution in pixels per inch.  This is
+either a string of two integers separated by C<x> (C<XRESxYRES>) or a
+single integer (if the X and Y resolution should be the same).
+(Passed to C<gs> as its C<-r> option.)
+
 =item C<device>
 
 The Ghostscript device to use (for advanced users only).  This is
@@ -468,12 +544,17 @@ advanced users only).
 
 =item C<unsafe>
 
-Ghostscript is normally run with -dSAFER, which prevents the
+Ghostscript is normally run with C<-dSAFER>, which prevents the
 PostScript code from accessing the filesystem.  Passing
-S<< C<< unsafe => 1 >> >> will use -dNOSAFER instead.  Don't do this
+S<C<< unsafe => 1 >>> will use C<-dNOSAFER> instead.  Don't do this
 unless you trust the PostScript code you are converting.
 
 =back
+
+=head2 Paper Sizes
+
+Paper sizes are not case sensitive.  These are the known sizes:
+"comm #10 envelope", "envelope-c5", "envelope-dl", "envelope-monarch", europostcard, executive, folio, "half-letter", ledger, legal, letter, superb, tabloid, "us-legal", "us-letter", A0 - A10, B0 - B10.
 
 =head1 DIAGNOSTICS
 
@@ -570,11 +651,17 @@ Opening the specified file failed for the specified reason.
 The C<format> you specified is not valid.
 
 
+=item C<< Unknown paper size %s >>
+
+The C<paper_size> you specified is not valid.
+
+
 =back
 
 =head1 CONFIGURATION AND ENVIRONMENT
 
-PostScript::Convert requires no configuration files or environment variables.
+PostScript::Convert expects to find a Ghostscript executable somewhere
+on your C<$ENV{PATH}>.  (See the C<ghostscript> option for details.)
 
 =head1 DEPENDENCIES
 
@@ -597,7 +684,7 @@ pass that file to C<psconvert>.)
 =for Pod::Coverage
 apply_format
 check_options
-^convert_
+convert_.+
 guess_output_filename
 
 =head1 BUGS AND LIMITATIONS
@@ -606,19 +693,19 @@ No bugs have been reported.
 
 =head1 AUTHOR
 
-Christopher J. Madsen  S<< C<< <perl AT cjmweb.net> >> >>
+Christopher J. Madsen  S<C<< <perl AT cjmweb.net> >>>
 
-Please report any bugs or feature requests to
-S<< C<< <bug-PostScript-Convert AT rt.cpan.org> >> >>,
+Please report any bugs or feature requests
+to S<C<< <bug-PostScript-Convert AT rt.cpan.org> >>>
 or through the web interface at
-L<http://rt.cpan.org/Public/Bug/Report.html?Queue=PostScript-Convert>
+L<< http://rt.cpan.org/Public/Bug/Report.html?Queue=PostScript-Convert >>.
 
 You can follow or contribute to PostScript-Convert's development at
 L<< http://github.com/madsen/postscript-convert >>.
 
 =head1 COPYRIGHT AND LICENSE
 
-This software is copyright (c) 2010 by Christopher J. Madsen.
+This software is copyright (c) 2012 by Christopher J. Madsen.
 
 This is free software; you can redistribute it and/or modify it under
 the same terms as the Perl 5 programming language system itself.

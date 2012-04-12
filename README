@@ -1,12 +1,49 @@
+PostScript-Convert version 0.02, released April 12, 2012
 
 
-This archive contains the distribution PostScript-Convert, version
-0.01:
+This module uses Ghostscript to convert PostScript to other formats.
+You will need to have Ghostscript installed.
 
-  Use Ghostscript to convert PostScript to other formats
 
-This software is copyright (c) 2010 by Christopher J. Madsen.
+
+INSTALLATION
+
+To install this module, run the following commands:
+
+	perl Makefile.PL
+	make
+	make test
+	make install
+
+
+
+DEPENDENCIES
+
+  Package       Minimum Version
+  ------------- ---------------
+  perl           5.008
+  Carp           
+  Exporter       5.57
+  File::Spec     
+  File::Temp     0.19
+  Scalar::Util
+
+
+
+CHANGES
+    Here's what's new in version 0.02 of PostScript-Convert:
+    (See the file "Changes" for the full revision history.)
+
+	- Add paper_size & resolution options
+	- Put gs_param before "-c .setpdfwrite" so it works with PDF output
+	- Make dependency on Exporter 5.57 explicit
+	- Add hello_world example
+
+
+
+COPYRIGHT AND LICENSE
+
+This software is copyright (c) 2012 by Christopher J. Madsen.
 
 This is free software; you can redistribute it and/or modify it under
 the same terms as the Perl 5 programming language system itself.
-
