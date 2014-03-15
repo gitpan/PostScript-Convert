@@ -14,11 +14,11 @@ package PostScript::Convert;
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See either the
 # GNU General Public License or the Artistic License for more details.
 #
-# ABSTRACT: Use Ghostscript to convert PostScript to other formats
+# ABSTRACT: Use Ghostscript to convert PostScript or PDF to other formats
 #---------------------------------------------------------------------
 
 use 5.008;
-our $VERSION = '0.02';          ## no critic
+our $VERSION = '0.03';          ## no critic
 
 use strict;
 use warnings;
@@ -57,6 +57,9 @@ our %format = do {
     png     => { device => 'png16m',  @png_param },
     pnggray => { device => 'pnggray', @png_param },
     pngmono => { device => 'pngmono', extension => 'png' },
+    jpeggray=> { device => 'jpeggray', extension => 'jpeg' },
+    jpeg    => { device => 'jpeg', extension => 'jpeg' },
+    jpg     => { device => 'jpeg', extension => 'jpg' },
     pdf14   => { @pdf_param => ['-dCompatibilityLevel=1.4'] },
     pdf13   => { @pdf_param => ['-dCompatibilityLevel=1.3'] },
     pdf12   => { @pdf_param => ['-dCompatibilityLevel=1.2'] },
@@ -367,12 +370,12 @@ __END__
 
 =head1 NAME
 
-PostScript::Convert - Use Ghostscript to convert PostScript to other formats
+PostScript::Convert - Use Ghostscript to convert PostScript or PDF to other formats
 
 =head1 VERSION
 
-This document describes version 0.02 of
-PostScript::Convert, released April 12, 2012.
+This document describes version 0.03 of
+PostScript::Convert, released March 15, 2014.
 
 =head1 SYNOPSIS
 
@@ -392,7 +395,7 @@ PostScript::Convert, released April 12, 2012.
 
 =head1 DESCRIPTION
 
-PostScript::Convert uses Ghostscript to convert PostScript to other
+PostScript::Convert uses Ghostscript to convert PostScript or PDF to other
 formats.  You will need to have Ghostscript installed.
 
 It exports a single function:
@@ -401,7 +404,7 @@ It exports a single function:
 
   psconvert($input, [$output_filename], [options...])
 
-This takes the PostScript code pointed to by C<$input> and processes
+This takes the PostScript code or PDF file pointed to by C<$input> and processes
 it through Ghostscript.  The return value is not meaningful.  It
 throws an exception if an error occurs.
 
@@ -492,6 +495,25 @@ PDF version 1.3 (Acrobat 4.0 - 1999)
 =item C<pdf12>
 
 PDF version 1.2 (Acrobat 3.0 - 1996)
+
+=item C<jpg>
+
+(v0.03) color JPEG with default extension .jpg
+(Note: JPEG encoding is not recommended.  It's designed for
+photo-realistic images, not the text and line art more commonly found
+in PostScript files.)
+
+You can control the compression quality by using
+S<C<< gs_param => ['-dJPEGQ=N'] >>> (where N is an integer from 0 to 100).
+The default depends on your Ghostscript, but is usually 75.
+
+=item C<jpeg>
+
+(v0.03) color JPEG with default extension .jpeg
+
+=item C<jpeggray>
+
+(v0.03) grayscale JPEG with default extension .jpeg
 
 =back
 
@@ -701,11 +723,11 @@ or through the web interface at
 L<< http://rt.cpan.org/Public/Bug/Report.html?Queue=PostScript-Convert >>.
 
 You can follow or contribute to PostScript-Convert's development at
-L<< http://github.com/madsen/postscript-convert >>.
+L<< https://github.com/madsen/postscript-convert >>.
 
 =head1 COPYRIGHT AND LICENSE
 
-This software is copyright (c) 2012 by Christopher J. Madsen.
+This software is copyright (c) 2014 by Christopher J. Madsen.
 
 This is free software; you can redistribute it and/or modify it under
 the same terms as the Perl 5 programming language system itself.

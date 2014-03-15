@@ -1,4 +1,4 @@
-PostScript-Convert version 0.02, released April 12, 2012
+PostScript-Convert version 0.03, released March 15, 2014
 
 
 This module uses Ghostscript to convert PostScript to other formats.
@@ -21,7 +21,7 @@ DEPENDENCIES
 
   Package       Minimum Version
   ------------- ---------------
-  perl           5.008
+  perl           5.8.0
   Carp           
   Exporter       5.57
   File::Spec     
@@ -31,19 +31,18 @@ DEPENDENCIES
 
 
 CHANGES
-    Here's what's new in version 0.02 of PostScript-Convert:
+    Here's what's new in version 0.03 of PostScript-Convert:
     (See the file "Changes" for the full revision history.)
 
-	- Add paper_size & resolution options
-	- Put gs_param before "-c .setpdfwrite" so it works with PDF output
-	- Make dependency on Exporter 5.57 explicit
-	- Add hello_world example
+	- Add JPEG output formats (not recommended for most files)
+	- Document that PDF files are also acceptable input
+	  (This always worked; it just wasn't documented.)
 
 
 
 COPYRIGHT AND LICENSE
 
-This software is copyright (c) 2012 by Christopher J. Madsen.
+This software is copyright (c) 2014 by Christopher J. Madsen.
 
 This is free software; you can redistribute it and/or modify it under
 the same terms as the Perl 5 programming language system itself.
